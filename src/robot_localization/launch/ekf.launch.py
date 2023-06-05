@@ -22,14 +22,29 @@ from launch.substitutions import EnvironmentVariable
 import pathlib
 import launch.actions
 from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
+    # Declare launch arguments
+    # log_level = DeclareLaunchArgument('log_level',
+    #                                   default_value='debug',
+    #                                   description='Logging level (default: debug)')
+
+    # # Get log level from launch argument
+    # log_level_param = LaunchConfiguration('log_level')
+
+    # # Set environment variable for logging level
+    # env = {'RCUTILS_LOGGING_DEFAULT_LEVEL': log_level_param}
+
+
     return LaunchDescription([
         launch_ros.actions.Node(
             package='robot_localization',
             executable='ekf_node',
             name='ekf_filter_node',
             output='screen',
+            # env=env,
+            # prefix=['xterm -e gdb -ex run --args'],
             parameters=[os.path.join(get_package_share_directory("robot_localization"), 'params', 'ekf.yaml')],
            ),
-])
+    ])

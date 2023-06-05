@@ -16,7 +16,7 @@ ekf_filter_node_odom:
     world_frame: odom
 
     odom0: odometry/wheel
-    odom0_config: [false, false, false,
+    odom0_config: [true, true, true,
                   false, false, false,
                   true,  true,  true,
                   false, false, true,
@@ -28,13 +28,13 @@ ekf_filter_node_odom:
 
     imu0: imu/data
     imu0_config: [false, false, false,
-                  true,  true,  false,
+                  true,  true,  true,
                   false, false, false,
                   true,  true,  true,
                   true,  true,  true]
     imu0_nodelay: false
     imu0_differential: false
-    imu0_relative: false
+    imu0_relative: true
     imu0_queue_size: 10
     imu0_remove_gravitational_acceleration: true
 

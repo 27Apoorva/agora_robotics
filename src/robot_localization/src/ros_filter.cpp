@@ -820,7 +820,12 @@ void RosFilter<T>::loadParams()
   // Try to resolve tf_prefix
   std::string tf_prefix = "";
   std::string tf_prefix_path = "";
-  this->declare_parameter("tf_prefix", rclcpp::PARAMETER_STRING);
+  // this->declare_parameter("tf_prefix", rclcpp::PARAMETER_STRING);
+  rcl_interfaces::msg::ParameterDescriptor descriptor;
+descriptor.type = rclcpp::PARAMETER_STRING;
+// descriptor.dynamic_typing = false;
+
+this->declare_parameter("tf_prefix", rclcpp::ParameterValue(std::string("")), descriptor);
   if (this->get_parameter("tf_prefix", tf_prefix_path)) {
     // Append the tf prefix in a tf2-friendly manner
     filter_utilities::appendPrefix(tf_prefix, map_frame_id_);
@@ -1032,7 +1037,7 @@ void RosFilter<T>::loadParams()
   // Create a subscriber for manually setting/resetting pose
   set_pose_sub_ =
     this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "set_pose", rclcpp::QoS(1),
+    "/initialpose", rclcpp::QoS(1),
     std::bind(&RosFilter<T>::setPoseCallback, this, std::placeholders::_1));
 
   // Create a service for manually setting/resetting pose
@@ -1985,19 +1990,21 @@ void RosFilter<T>::initialize()
       this->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
       "accel/filtered", rclcpp::QoS(10), publisher_options);
   }
-
   const std::chrono::duration<double> timespan{1.0 / frequency_};
   timer_ = rclcpp::GenericTimer<rclcpp::VoidCallbackType>::make_shared(
     this->get_clock(), std::chrono::duration_cast<std::chrono::nanoseconds>(timespan),
     std::bind(&RosFilter<T>::periodicUpdate, this), this->get_node_base_interface()->get_context());
   this->get_node_timers_interface()->add_timer(timer_, nullptr);
+
 }
 
 template<typename T>
 void RosFilter<T>::periodicUpdate()
 {
+  // std::cout << "periodicUpdate" << std::endl;
   // Wait for the filter to be enabled
   if (!enabled_) {
+    // std::cout << "filter is disabled" << std::endl;
     RCLCPP_INFO_ONCE(
       this->get_logger(),
       "Filter is disabled. To enable it call the %s service",
@@ -2006,16 +2013,20 @@ void RosFilter<T>::periodicUpdate()
   }
 
   rclcpp::Time cur_time = this->now();
+  // std::cout << "cur_time" << std::endl;
 
   if (toggled_on_) {
     // Now we'll integrate any measurements we've received
+    // std::cout << "integrateMeasurements" << std::endl;
     integrateMeasurements(cur_time);
   } else {
     // Clear out measurements since we're not currently processing new entries
+    // std::cout << "clearMeasurementQueue" << std::endl;
     clearMeasurementQueue();
 
     // Reset last measurement time so we don't get a large time delta on toggle
     if (filter_.getInitializedStatus()) {
+      // std::cout << "getInitializedStatus" << std::endl;
       filter_.setLastMeasurementTime(this->now());
     }
   }
@@ -2045,6 +2056,7 @@ void RosFilter<T>::periodicUpdate()
     // The filtered_position is the message containing the state and covariances:
     // nav_msgs Odometry
     if (!validateFilterOutput(filtered_position.get())) {
+      // std::cout << "validateFilterOutput nans" << std::endl;
       RCLCPP_ERROR(
         this->get_logger(),
         "Critical Error, NaNs were detected in the output state of the filter. "
@@ -2058,8 +2070,13 @@ void RosFilter<T>::periodicUpdate()
     // behavior optional. Just for safety, we also check for the condition where the last published
     // stamp is *later* than this stamp. This should never happen, but we should handle the case
     // anyway.
+
     corrected_data = (!permit_corrected_publication_ &&
       last_published_stamp_ >= filtered_position->header.stamp);
+    
+    // std::cout << "CORRECTED DATA: " << corrected_data << std::endl;
+    // std::cout << "last_published_stamp_: " << last_published_stamp_.nanoseconds()<< std::endl;
+    // std::cout << "filtered_position : " << filtered_position->header.stamp.sec << std::endl;
 
     // If the world_frame_id_ is the odom_frame_id_ frame, then we can just
     // send the transform. If the world_frame_id_ is the map_frame_id_ frame,

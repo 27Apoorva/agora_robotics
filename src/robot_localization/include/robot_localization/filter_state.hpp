@@ -55,7 +55,7 @@ struct FilterState
 {
   FilterState()
   : state_(), estimate_error_covariance_(), latest_control_(),
-    last_measurement_time_(0.0), latest_control_time_(0)
+    last_measurement_time_(0, 0, RCL_ROS_TIME), latest_control_time_(0, 0, RCL_ROS_TIME)
   {
   }
 
