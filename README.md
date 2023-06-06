@@ -4,10 +4,10 @@ Process to build and execute the code:
 
 1. Create a workspace.
 ```
-mkdir -p ~/ros2_ws/src/
+mkdir -p ~/ros2_ws/
 ```
 
-2. Clone the repository inside `src` folder.
+2. Clone the repository inside `ros2_ws` folder.
 ``` 
 git clone https://github.com/27Apoorva/agora_robotics.git
 ```
