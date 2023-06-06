@@ -12,13 +12,11 @@ import math
 import matplotlib.pyplot as plt
 from std_msgs.msg import Float64
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
 import io
 import cv2
 from std_srvs.srv import SetBool
 from geometry_msgs.msg import Transform, TransformStamped, PoseStamped, Vector3
 import tf2_geometry_msgs
-# import tf.transformations as tft
 import os
 
 class OdomTracker(Node):
@@ -47,47 +45,17 @@ class OdomTracker(Node):
             '/ground_truth_odom',
             10)
 
-        # Create a publisher for the error
-        self.error_publisher = self.create_publisher(
-            Odometry,
-            '/odom_error',
-            10)
-        self.t_publisher = self.create_publisher(Image, 'translation_error', 10)
         # Create a subscriber for the ground truth odometry
         self.subscription = self.create_subscription(
             Odometry,
             '/odometry/filtered',
             self.ground_truth_odom_callback,
             10)
-        self.imu_subscription = self.create_subscription(
-            Odometry,
-            '/imu',
-            self.imu_callback,
-            10)
-        # self.imu_publisher = self.create_publisher(
-        #     Imu,
-        #     '/imu_o',
-        #     10
-        # )
         
         self.ground_truth_odometry = Odometry()
         self.wheel_odom = Odometry()
         self.map_T_odom = Transform()
-        self.cv_bridge = CvBridge()
-        # service = rospy.Service('plot_and_save', SetBool, handle_plot_and_save)
         self.srv = self.create_service(SetBool, 'plot_and_save', self.handle_plot_and_save)
-
-
-    
-    def imu_callback(self, msg):
-        # Swap the value of orientation
-        temp = msg.orientation.w
-        msg.orientation.w = msg.orientation.z
-        msg.orientation.z = temp
-
-        # Publish the modified IMU message
-        self.imu_publisher.publish(msg)
-
 
     def odom_callback(self, msg):
         """
@@ -124,8 +92,6 @@ class OdomTracker(Node):
         self.ground_truth_odometry = ground_truth_odom
 
     def handle_plot_and_save(self, request, response):
-        # values = request.values  # Assuming the request has a field named 'values' which is a list
-
         # Plot the values
         plt.plot(self.translational_error, label ='filtered_odom_error')
         plt.plot(self.translational_error_wheel, label ='wheel_odom_error')
@@ -141,9 +107,7 @@ class OdomTracker(Node):
         # Close the plot
         plt.close()
 
-        # response = SetBoolResponse()
         response.success = True
-        # response.message = 'Plot and image saved successfully'
         return response
     
     def convert_quat_to_euler(self, quaternion):
@@ -196,7 +160,6 @@ class OdomTracker(Node):
         
         # Perform the dot product of the two transformation matrices
         wheel_odom_result = np.dot(map_T_odom_arr, wheel_odom_array)
-        # import pdb; pdb.set_trace()
         # self.get_logger().info("map_T_odom")
         # self.get_logger().info('x: %f' % map_T_odom_translation[0])
         # self.get_logger().info('y: %f' % map_T_odom_translation[1])
@@ -228,66 +191,28 @@ class OdomTracker(Node):
         # self.get_logger().info('y: %f' % filtered_odom_result[1,2])
 
         # self.get_logger().info("wheel odom truth")
-        # # import pdb; pdb.set_trace()
         # self.get_logger().info('x: %f' % wheel_odom_result[0,2])
         # self.get_logger().info('y: %f' % wheel_odom_result[1,2])
 
-        # distance = np.sqrt(error.pose.pose.position.x**2 + error.pose.pose.position.y**2)
-        # self.get_logger().info('gt distance: %f' % distance)
-
         filtered_error_x = self.ground_truth_odometry.pose.pose.position.x - filtered_odom_result[0,2]
         filtered_error_y = self.ground_truth_odometry.pose.pose.position.y - filtered_odom_result[1,2]
-        # self.get_logger().info('wheel_odom x: %f' % error_x)
-        # self.get_logger().info('wheel_odom y: %f' % error_y)
         filtered_distance = np.sqrt(filtered_error_x**2 + filtered_error_y**2)
         self.get_logger().info('filtered distance: %f' % filtered_distance)
+        
         odom_error_x = self.ground_truth_odometry.pose.pose.position.x - wheel_odom_result[0,2]
         odom_error_y = self.ground_truth_odometry.pose.pose.position.y - wheel_odom_result[1,2]
-        # self.get_logger().info('wheel_odom x: %f' % error_x)
-        # self.get_logger().info('wheel_odom y: %f' % error_y)
         odom_distance = np.sqrt(odom_error_x**2 + odom_error_y**2)
         self.get_logger().info('odom distance: %f \n' % odom_distance)
+        
         delta = odom_distance - filtered_distance
         self.get_logger().info('delta: %f \n' % delta)
-        # self.error_publisher.publish(error)
+
         if filtered_distance > 1000:
             print("distance greater")
             return
         else:
             self.translational_error.append(filtered_distance)
             self.translational_error_wheel.append(odom_distance)
-        # plt.plot(self.translational_error)
-        # plt.xlabel('Time')
-        # plt.ylabel('Translational Error')
-        # plt.title('Translational Error between Poses')
-        # fig, ax = plt.subplots()
-        # # ax.plot(self.translational_error)
-        # ax.set_xlabel('Time')
-        # ax.set_ylabel('Error')
-        # ax.set_title('Translational Error between Poses')
-        # image_path = 'output.png'
-        # fig.savefig(image_path)
-        # plt.show()
-         # Convert the plot to an image and publish it
-        # Convert the Matplotlib figure to an image format (e.g., PNG)
-        # image_format = 'png'
-        # image_data = self.fig_to_image(fig, image_format)
-
-        # # Create an Image message and publish it
-        # image_msg = self.cv_bridge.cv2_to_imgmsg(image_data, encoding='passthrough')
-        # self.t_publisher.publish(image_msg)
-    def fig_to_image(self, fig, image_format='png'):
-        # Convert the Matplotlib figure to an image buffer
-        buf = io.BytesIO()
-        fig.savefig(buf, format=image_format)
-        buf.seek(0)
-
-        # Read the image buffer using OpenCV
-        image_data = cv2.imdecode(np.frombuffer(buf.getvalue(), dtype=np.uint8), -1)
-
-        return image_data
-
-
 
 def main(args=None):
     rclpy.init(args=args)
