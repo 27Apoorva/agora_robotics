@@ -31,11 +31,6 @@ ros2 service call /plot_and_save std_srvs/SetBool "{data: true}"
 
 ```
 
-To run amcl:
-```
-ros2 launch nav2_bringup localization_launch.py use_sim_time:=False autostart:=True map:=agora_map.yaml params_file:=navigation2/nav2_bringup/params/nav2_params.yaml
-
-```
 AMCL:
 1. Created a `.pgm` map from the bag using `nav2_map_server`. This is the 2D Occupancy map supplied to AMCL. 
 2. Build `nav2_amcl` using `colcon build --packages-select nav2_amcl --allow-overriding nav2_amcl`
