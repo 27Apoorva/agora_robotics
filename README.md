@@ -36,3 +36,15 @@ To run amcl:
 ros2 launch nav2_bringup localization_launch.py use_sim_time:=False autostart:=True map:=agora_map.yaml params_file:=navigation2/nav2_bringup/params/nav2_params.yaml
 
 ```
+AMCL:
+1. Created a `.pgm` map from the bag using `nav2_map_server`. This is the 2D Occupancy map supplied to AMCL. 
+2. Build `nav2_amcl` using `colcon build --packages-select nav2_amcl --allow-overriding nav2_amcl`
+3. Use the map file name stored in `src `folder. Make sure before running the comamnd, you are in src folder path. The following command will run AMCL on the bag as well as robot.
+```
+ros2 launch nav2_bringup localization_launch.py use_sim_time:=False autostart:=True map:=agora_map.yaml params_file:=navigation2/nav2_bringup/params/nav2_params.yaml
+```
+4. Once launched, open `RViz`and use `2D Position` tool to give the initial pose of the robot to AMCL before robot starts moving.
+5. You can echo the topic `amcl_pose` to see the pose estimate of AMCL.
+6. For the bag, the tf already had map frame that is why you might see some jumping in tf on bag.
+7. For the robot, this map to odom will come from AMCL. 
+8. To get the robot’s pose, you can listen for tf between map and base_link and even publish it as a new topic at your desired frequency and supply it to the rest of the system.
